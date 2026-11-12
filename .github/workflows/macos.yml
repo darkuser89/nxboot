@@ -31,7 +31,6 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     env:
-      NXBOOT_BUILD_ROOT: ${{ runner.temp }}/NXBootModern-Build
       NXBOOT_CONFIGURATION: release
     outputs:
       version: ${{ steps.package.outputs.version }}
@@ -46,6 +45,7 @@ jobs:
           test "$(uname -m)" = arm64
           swift --version
           xcodebuild -version
+          echo "NXBOOT_BUILD_ROOT=$RUNNER_TEMP/NXBootModern-Build" >> "$GITHUB_ENV"
       - name: Run unit tests and native USB registry checks
         run: ./script/test.sh
       - name: Build release and verify all Finder colors and strict signatures
