@@ -1,4 +1,21 @@
-# NXBoot
+# NXBoot Modern
+
+Native macOS 14+ app for Apple Silicon, based on [mologie/nxboot](https://github.com/mologie/nxboot).
+
+- Compact SwiftUI interface with USB/RCM detection, payload favorites and optional automatic sending.
+- Nine Joy-Con accent colors, matching Dock/Finder icons and strict code signature verification.
+- Built and published by [GitHub Actions](https://github.com/darkuser89/nxboot/actions/workflows/macos.yml).
+
+**[Download the latest release](https://github.com/darkuser89/nxboot/releases/latest)** ·
+[macOS usage and build instructions](README-modern.md)
+
+Pushes to `master` run the tests and release build on a GitHub-hosted ARM Mac.
+After all checks pass, GitHub Actions publishes the version from `VERSION`.
+Existing releases are not overwritten. The app is ad hoc signed, not Apple-notarized.
+
+## Original NXBoot project
+
+The original iOS and command-line sources and documentation follow below.
 
 This application enables provisioning a Tegra X1 powered device with early boot code using an iOS or macOS device. For example, you may use this application to start the Hekate Bootloader or the Lakka Linux Distrobution (RetroArch) on a supported Nintendo Switch.
 

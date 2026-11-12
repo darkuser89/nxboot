@@ -23,12 +23,13 @@ static UInt32 const kNXCmdHeaderSize   = 680;
 static UInt32 const kNXCmdMaxSize      = 0x30298; // approx. 192 KiB
 static UInt32 const kNXPacketMaxSize   = 0x1000;
 
-size_t const NXMaxFuseePayloadSize = kNXCmdMaxSize -
+// Final packets are 4 KiB, so round the command limit down before reserving headers.
+size_t const NXMaxFuseePayloadSize = (kNXCmdMaxSize - kNXCmdMaxSize % kNXPacketMaxSize) -
     (kNXStackSprayEnd - kNXStackSprayStart) -
     (kNXRelocatorAddr - kNXPayloadAddr) -
     kNXCmdHeaderSize;
 
-static UInt8 DMADummyBuffer[kNXStackLowest - kNXCopyBuf1]; // 0x7000 / 28 KiB
+static UInt8 DMADummyBuffer[0x7000]; // kNXStackLowest - kNXCopyBuf1 / 28 KiB
 
 #define ERR(FMT, ...) NXExecSetError([NSString stringWithFormat:FMT, ##__VA_ARGS__], err)
 
@@ -313,6 +314,7 @@ struct NXExecDesc NXExecAcquireDeviceInterface(NXUSBDeviceInterface **device, NS
     struct NXExecDesc desc = kNXExecDescInvalid;
     io_iterator_t subIntfIter = 0;
     io_service_t intfService = 0;
+    BOOL deviceOpen = NO;
 
     // open and configure device
     kr = NXCOMCall(device, USBDeviceOpenSeize);
@@ -320,6 +322,7 @@ struct NXExecDesc NXExecAcquireDeviceInterface(NXUSBDeviceInterface **device, NS
         ERR(@"USBDeviceOpenSeize failed with code %08x", kr);
         goto cleanup_error;
     }
+    deviceOpen = YES;
     kr = NXCOMCall(device, SetConfiguration, 1);
     if (kr) {
         ERR(@"SetConfiguration failed with code %08x", kr);
@@ -342,6 +345,8 @@ struct NXExecDesc NXExecAcquireDeviceInterface(NXUSBDeviceInterface **device, NS
         NSNumber *intfnum = (__bridge_transfer NSNumber *)IORegistryEntryCreateCFProperty(intfService, CFSTR("bInterfaceNumber"), kCFAllocatorDefault, 0);
         if (intfnum == nil) {
             NXLog(@"WARN: Could not get bInterfaceNumber for an interface, skipping it");
+            IOObjectRelease(intfService);
+            intfService = 0;
             continue;
         }
         if (intfnum.integerValue == 0) {
@@ -420,13 +425,19 @@ struct NXExecDesc NXExecAcquireDeviceInterface(NXUSBDeviceInterface **device, NS
     }
     NXLog(@"USB: Bulk read pipe ID %u, write pipe ID %u", desc.readRef, desc.writeRef);
 
+    if (desc.readRef == 0 || desc.writeRef == 0) {
+        ERR(@"The USB interface is missing its bulk read or write endpoint.");
+        goto cleanup_error;
+    }
+    IOObjectRelease(intfService);
+    intfService = 0;
     desc.device = device;
 
     return desc;
 
 cleanup_error:
     if (intfService) {
-        IOObjectRetain(intfService);
+        IOObjectRelease(intfService);
         intfService = 0;
         (void)intfService; // for analyzer
     }
@@ -439,7 +450,7 @@ cleanup_error:
         NXCOMCall(desc.intf, USBInterfaceClose);
         NXCOMCall(desc.intf, Release);
     }
-    NXCOMCall(device, USBDeviceClose);
+    if (deviceOpen) NXCOMCall(device, USBDeviceClose);
     return kNXExecDescInvalid;
 }
 

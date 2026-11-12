@@ -26,3 +26,7 @@ xcuserdata
 /bin
 /dist
 .ldid.*
+
+# SwiftPM artifacts belong in the external NXBootModern-Build tree.
+.build/
+.swiftpm/

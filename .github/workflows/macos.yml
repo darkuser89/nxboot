@@ -1,0 +1,110 @@
+name: macOS ARM build and release
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'Modern/**'
+      - 'ModernUSB/**'
+      - 'NXBootKit/**'
+      - 'Shared/intermezzo.bin'
+      - 'Assets/**'
+      - 'Tests/**'
+      - 'Package.swift'
+      - 'VERSION'
+      - 'script/**'
+      - '.github/workflows/macos.yml'
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-arm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Test and build Apple Silicon app
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      NXBOOT_BUILD_ROOT: ${{ runner.temp }}/NXBootModern-Build
+      NXBOOT_CONFIGURATION: release
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          lfs: false
+      - name: Verify ARM runner and toolchain
+        run: |
+          test "$(uname -m)" = arm64
+          swift --version
+          xcodebuild -version
+      - name: Run unit tests and native USB registry checks
+        run: ./script/test.sh
+      - name: Build release and verify all Finder colors and strict signatures
+        run: ./script/check_finder_icons.sh
+      - name: Package verified app
+        id: package
+        run: ./script/ci_package.sh
+      - name: Transfer verified release files
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: NXBootModern-macOS-arm64
+          path: ${{ steps.package.outputs.directory }}/*
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  publish:
+    name: Publish GitHub-built release
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified files
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: NXBootModern-macOS-arm64
+          path: release
+      - name: Verify transfer checksums
+        working-directory: release
+        run: sha256sum --check SHA256SUMS.txt
+      - name: Publish new version without replacing an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          APP_VERSION: ${{ needs.build.outputs.version }}
+          SOURCE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v$APP_VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Increment VERSION for a new release." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          Native NXBoot Modern for Apple Silicon, macOS 14 or newer.
+
+          Built, tested, packaged and published by GitHub Actions from this repository.
+
+          - RCM detection through USB events, favorites and optional automatic payload sending.
+          - Nine Joy-Con accent colors with matching Dock and Finder icons.
+          - Unit tests, native USB registry subscription checks and all nine strict icon/signature checks passed.
+          - Ad hoc signed; not Apple-notarized. No boot payloads are included.
+
+          Download the arm64 ZIP and verify it using SHA256SUMS.txt. GPLv3; based on mologie/nxboot.
+          NOTES
+          gh release create "$TAG" release/*.zip release/SHA256SUMS.txt \
+            --target "$SOURCE_SHA" --title "NXBoot Modern $APP_VERSION" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" --latest
