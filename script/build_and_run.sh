@@ -74,7 +74,7 @@ PLIST
 
 /usr/bin/codesign --force --sign - "$STAGING"
 /usr/bin/codesign --verify --strict "$STAGING"
-/usr/bin/lipo -verify_arch arm64 "$STAGING/Contents/MacOS/$APP_NAME"
+/usr/bin/lipo "$STAGING/Contents/MacOS/$APP_NAME" -verify_arch arm64
 if [[ -e "$PREVIOUS" ]]; then echo "Unvollständiger früherer App-Austausch: $PREVIOUS" >&2; exit 1; fi
 if [[ -e "$APP_BUNDLE" ]]; then mv "$APP_BUNDLE" "$PREVIOUS"; fi
 mv "$STAGING" "$APP_BUNDLE"
