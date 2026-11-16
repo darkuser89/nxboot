@@ -16,7 +16,7 @@ actor FinderIconService {
         guard url.isFileURL, url.pathExtension.lowercased() == "app",
               files.isWritableFile(atPath: url.path),
               files.isWritableFile(atPath: url.deletingLastPathComponent().path) else {
-            throw failure("Die App und ihr Ordner müssen für dich beschreibbar sein.")
+            throw AppMessage("error.icon.writable")
         }
         try Task.checkCancellation()
 
@@ -24,10 +24,10 @@ actor FinderIconService {
         let work = url.deletingLastPathComponent().appendingPathComponent(".NXBootModern-icon-update", isDirectory: true)
         let lockURL = url.deletingLastPathComponent().appendingPathComponent(".NXBootModern-icon.lock")
         let fd = open(lockURL.path, O_CREAT | O_RDWR | O_CLOEXEC, S_IRUSR | S_IWUSR)
-        guard fd >= 0 else { throw failure("Der Icon-Wechsel konnte nicht vorbereitet werden.") }
+        guard fd >= 0 else { throw AppMessage("error.icon.prepare") }
         defer { close(fd) }
         guard flock(fd, LOCK_EX | LOCK_NB) == 0 else {
-            throw failure("Ein anderer Icon-Wechsel läuft bereits. Bitte kurz erneut versuchen.")
+            throw AppMessage("error.icon.busy")
         }
         defer { flock(fd, LOCK_UN) }
         try checkLocalIdentity(url)
@@ -35,7 +35,7 @@ actor FinderIconService {
         let infoData = try Data(contentsOf: infoURL)
         guard var info = try PropertyListSerialization.propertyList(from: infoData, format: nil) as? [String: Any],
               info["CFBundleIdentifier"] as? String == bundleID else {
-            throw failure("Das App-Paket konnte nicht zugeordnet werden.")
+            throw AppMessage("error.icon.bundle")
         }
         if files.fileExists(atPath: work.path) { try files.removeItem(at: work) }
         if info["NXBootFinderAccent"] as? String == accent.rawValue,
@@ -79,7 +79,7 @@ actor FinderIconService {
 
         // Both names exchange atomically. The live process continues using its unchanged old inode.
         guard renameatx_np(AT_FDCWD, staged.path, AT_FDCWD, url.path, UInt32(RENAME_SWAP)) == 0 else {
-            throw failure("Das geprüfte App-Paket konnte nicht eingesetzt werden (\(errno)).")
+            throw AppMessage("error.icon.swap", String(errno))
         }
         do {
             try validate(url, strict: true)
@@ -87,7 +87,7 @@ actor FinderIconService {
             if renameatx_np(AT_FDCWD, staged.path, AT_FDCWD, url.path, UInt32(RENAME_SWAP)) != 0 {
                 // Retain the only recovery item if the filesystem prevents a rollback.
                 cleanupWork = false
-                throw failure("App-Austausch fehlgeschlagen. Der Austauschbestand liegt unter \(work.path).")
+                throw AppMessage("error.icon.rollback", work.path)
             }
             throw error
         }
@@ -103,7 +103,7 @@ actor FinderIconService {
               signing[kSecCodeInfoIdentifier as String] as? String == bundleID,
               let flags = signing[kSecCodeInfoFlags as String] as? NSNumber,
               flags.uint32Value & SecCodeSignatureFlags.adhoc.rawValue != 0 else {
-            throw failure("Dieser Finder-Farbwechsel ist für die lokal signierte NXBoot-App vorgesehen.")
+            throw AppMessage("error.icon.localSigning")
         }
         // Never mask pre-existing code/resource corruption. Legacy Finder metadata is allowed only here.
         try validate(url, strict: false)
@@ -112,7 +112,7 @@ actor FinderIconService {
     private func staticCode(_ url: URL) throws -> SecStaticCode {
         var code: SecStaticCode?
         guard SecStaticCodeCreateWithPath(url as CFURL, SecCSFlags(), &code) == errSecSuccess,
-              let code else { throw failure("Die App-Signatur konnte nicht gelesen werden.") }
+              let code else { throw AppMessage("error.icon.readSignature") }
         return code
     }
 
@@ -121,7 +121,7 @@ actor FinderIconService {
             (strict ? UInt32(kSecCSStrictValidate) : 0)
         let status = SecStaticCodeCheckValidity(try staticCode(url), SecCSFlags(rawValue: flags), nil)
         guard status == errSecSuccess else {
-            throw failure("Der Icon-Wechsel wurde wegen einer fehlgeschlagenen Signaturprüfung nicht übernommen (\(status)).")
+            throw AppMessage("error.icon.signature", String(status))
         }
     }
 
@@ -135,7 +135,7 @@ actor FinderIconService {
                 guard let context = CGContext(data: nil, width: pixels, height: pixels,
                     bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
-                    throw failure("Das farbige Icon konnte nicht erzeugt werden.")
+                    throw AppMessage("error.icon.render")
                 }
                 context.interpolationQuality = .high
                 context.draw(image, in: CGRect(x: 0, y: 0, width: pixels, height: pixels))
@@ -143,11 +143,11 @@ actor FinderIconService {
                 guard let bitmap = context.makeImage(),
                       let destination = CGImageDestinationCreateWithURL(pngURL as CFURL,
                             UTType.png.identifier as CFString, 1, nil) else {
-                    throw failure("Das farbige Icon konnte nicht gespeichert werden.")
+                    throw AppMessage("error.icon.save")
                 }
                 CGImageDestinationAddImage(destination, bitmap, nil)
                 guard CGImageDestinationFinalize(destination) else {
-                    throw failure("Das farbige Icon konnte nicht gespeichert werden.")
+                    throw AppMessage("error.icon.save")
                 }
             }
         }
@@ -164,12 +164,7 @@ actor FinderIconService {
         try process.run()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
-            throw failure("Das farbige App-Paket konnte nicht erstellt oder signiert werden.")
+            throw AppMessage("error.icon.sign")
         }
-    }
-
-    private func failure(_ message: String) -> NSError {
-        NSError(domain: "NXBootModern.FinderIcon", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: message])
     }
 }

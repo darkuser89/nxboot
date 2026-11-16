@@ -12,16 +12,16 @@ struct Payload: Codable, Identifiable, Equatable, Sendable {
     var lastSentAt: Date?
 }
 
-enum PayloadError: LocalizedError {
+enum PayloadError: LocalizedAppError {
     case notLocal, empty, tooLarge, notRegular, missing, unsupportedLibrary
-    var errorDescription: String? {
+    var message: AppMessage {
         switch self {
-        case .notLocal: return "Bitte eine lokale Payload-Datei auswählen."
-        case .empty: return "Die Payload-Datei ist leer."
-        case .tooLarge: return "Der Payload ist zu groß. Maximal \(Int(NXPayloadSizeLimit())) Bytes sind möglich."
-        case .notRegular: return "Bitte eine einzelne .bin-Datei auswählen."
-        case .missing: return "Die Datei ist nicht mehr erreichbar. Bitte über ‚Datei neu zuordnen‘ auswählen."
-        case .unsupportedLibrary: return "Diese Mediathek hat ein unbekanntes Format. Sie wird nicht überschrieben."
+        case .notLocal: return AppMessage("error.notLocal")
+        case .empty: return AppMessage("error.empty")
+        case .tooLarge: return AppMessage("error.tooLarge", String(NXPayloadSizeLimit()))
+        case .notRegular: return AppMessage("error.notRegular")
+        case .missing: return AppMessage("error.missing")
+        case .unsupportedLibrary: return AppMessage("error.libraryFormat")
         }
     }
 }

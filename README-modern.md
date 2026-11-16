@@ -1,5 +1,9 @@
 # NXBoot Modern für Apple Silicon
 
+Unter **NXBoot Modern → Einstellungen** (⌘,) kannst du die Systemsprache verwenden
+oder Deutsch, Rumänisch und Englisch direkt auswählen. Ist die macOS-Sprache
+unbekannt oder wird sie nicht unterstützt, verwendet die App Englisch.
+
 Native macOS-Oberfläche auf Basis von [mologie/nxboot](https://github.com/mologie/nxboot).
 Die ursprünglichen iOS- und Kommandozeilenprojekte bleiben im Repository erhalten.
 Die neue App wird über `Package.swift` gebaut und benötigt macOS 14 oder neuer sowie

@@ -35,6 +35,9 @@ mkdir -p "$STAGING/Contents/MacOS" "$STAGING/Contents/Resources"
 cp "$BIN_DIR/$APP_NAME" "$STAGING/Contents/MacOS/$APP_NAME"
 cp "$ROOT_DIR/Shared/intermezzo.bin" "$STAGING/Contents/Resources/intermezzo.bin"
 cp "$ROOT_DIR/COPYING.md" "$STAGING/Contents/Resources/COPYING.md"
+for LOCALIZATION in "$ROOT_DIR"/Modern/Resources/*.lproj; do
+    /usr/bin/ditto "$LOCALIZATION" "$STAGING/Contents/Resources/$(basename "$LOCALIZATION")"
+done
 /usr/bin/sips -z 1024 1024 "$ROOT_DIR/Assets/AppIcon.png" \
     --out "$STAGING/Contents/Resources/AppIconTemplate.png" >/dev/null
 
@@ -62,6 +65,7 @@ cat > "$STAGING/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>NXBoot Modern</string>
 <key>CFBundleIconFile</key><string>AppIcon.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
 <key>CFBundleShortVersionString</key><string>0.0.0</string>
 <key>CFBundleVersion</key><string>6</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>

@@ -5,26 +5,28 @@ struct PayloadListView: View {
     @Environment(\.joyConAccent) private var accent
     @Environment(\.colorScheme) private var colorScheme
     @FocusState private var listIsFocused: Bool
+    @Environment(\.appLanguage) private var language
+
     var body: some View {
         VStack(spacing: 4) {
             HStack(spacing: 8) {
-                Picker("Ansicht", selection: $model.section) {
-                    Text("Alle").tag(Optional(LibrarySection.all))
-                    Text("Favoriten").tag(Optional(LibrarySection.favorites))
+                Picker(language.text("payload.view"), selection: $model.section) {
+                    Text(language.text("payload.all")).tag(Optional(LibrarySection.all))
+                    Text(language.text("favorites.title")).tag(Optional(LibrarySection.favorites))
                 }.pickerStyle(.segmented).labelsHidden().frame(width: 145)
-                TextField("Suchen", text: $model.search)
-                    .textFieldStyle(.roundedBorder).accessibilityLabel("Payload suchen")
+                TextField(language.text("payload.search"), text: $model.search)
+                    .textFieldStyle(.roundedBorder).accessibilityLabel(language.text("payload.searchHelp"))
             }.padding(.horizontal, 10).padding(.top, 7)
 
             if model.filteredPayloads.isEmpty {
                 VStack(spacing: 10) {
                     Image(systemName: model.section == .favorites ? "star" : "tray.and.arrow.down")
                         .font(.system(size: 25, weight: .light)).foregroundStyle(.secondary)
-                    Text(model.search.isEmpty ? (model.section == .favorites ? "Keine Favoriten" : "Keine Payloads") : "Keine Treffer")
+                    Text(language.text(model.search.isEmpty ? (model.section == .favorites ? "favorites.empty" : "payload.noFiles") : "payload.noResults"))
                         .font(.callout.weight(.medium))
-                    Text(model.section == .favorites ? "Payloads mit dem Stern markieren." : ".bin-Dateien hier ablegen oder hinzufügen.")
+                    Text(language.text(model.section == .favorites ? "favorites.hint" : "payload.dropHint"))
                         .font(.caption).foregroundStyle(.secondary)
-                    Button("Hinzufügen…") { model.chooseFiles() }.disabled(model.isSending)
+                    Button(language.text("action.add")) { model.chooseFiles(language: language) }.disabled(model.isSending)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollViewReader { proxy in
@@ -35,17 +37,17 @@ struct PayloadListView: View {
                             Text(payload.name).font(.callout.weight(.medium)).lineLimit(1)
                                 .help(payload.filename)
                             Spacer(minLength: 0)
-                            Text(ByteCountFormatter.string(fromByteCount: Int64(payload.byteCount), countStyle: .file))
+                            Text(Int64(payload.byteCount).formatted(.byteCount(style: .file).locale(language.locale)))
                                 .font(.caption).foregroundStyle(.secondary)
                             Button { model.toggleFavorite(payload) } label: {
                                 Image(systemName: payload.isFavorite ? "star.fill" : "star")
                                     .foregroundStyle(payload.isFavorite ? accent.controlColor(for: colorScheme) : .secondary)
                             }.buttonStyle(.borderless)
-                                .help(payload.isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")
+                                .help(language.text(payload.isFavorite ? "favorites.remove" : "favorites.add"))
                             Button { model.send(payload) } label: {
                                 Image(systemName: "paperplane")
                             }.buttonStyle(.borderless).disabled(!model.canSendToDevice)
-                                .help("\(payload.name) senden")
+                                .help(language.text("payload.sendNamed", payload.name))
                         }.padding(.vertical, 1).id(payload.id)
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -57,13 +59,13 @@ struct PayloadListView: View {
                         .accessibilityAddTraits(model.selectedPayloadID == payload.id ? .isSelected : [])
                         .accessibilityAction { model.selectedPayloadID = payload.id }
                         .contextMenu {
-                            Button("Payload senden") { model.send(payload) }.disabled(!model.canSendToDevice)
-                            Button(payload.isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen") {
+                            Button(language.text("payload.sendMenu")) { model.send(payload) }.disabled(!model.canSendToDevice)
+                            Button(language.text(payload.isFavorite ? "favorites.remove" : "favorites.add")) {
                                 model.toggleFavorite(payload)
                             }
-                            Button("Im Finder zeigen") { model.reveal(payload) }
+                            Button(language.text("payload.showInFinder")) { model.reveal(payload) }
                             Divider()
-                            Button("Aus Mediathek entfernen", role: .destructive) { model.remove(payload) }
+                            Button(language.text("payload.remove"), role: .destructive) { model.remove(payload) }
                         }
                     }
                 }.listStyle(.inset).disabled(model.isSending)

@@ -5,33 +5,43 @@ import SwiftUI
 struct NXBootModernApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
+    @AppStorage("languagePreference") private var languagePreference = LanguagePreference.system
+
+    private var language: AppLanguage { languagePreference.resolve() }
 
     var body: some Scene {
         Window("NXBoot Modern", id: "main") {
             ContentView(model: model)
+                .environment(\.appLanguage, language)
+                .environment(\.locale, language.locale)
                 .task { await model.monitor() }
         }
         .defaultSize(width: 420, height: 300)
         .windowToolbarStyle(.unifiedCompact)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("Payloads hinzufügen…") { model.chooseFiles() }
+                Button(language.text("payload.addMultiple")) { model.chooseFiles(language: language) }
                     .keyboardShortcut("o")
                     .disabled(model.isSending)
             }
             CommandMenu("Payload") {
-                Button("Ausgewählten Payload senden") { model.send() }
+                Button(language.text("payload.sendSelected")) { model.send() }
                     .keyboardShortcut(.return, modifiers: .command)
                     .disabled(!model.canSend)
                 if let payload = model.selectedPayload {
-                    Button(payload.isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen") {
+                    Button(language.text(payload.isFavorite ? "favorites.remove" : "favorites.add")) {
                         model.toggleFavorite(payload)
                     }.keyboardShortcut("d")
                 }
                 Divider()
-                Button("USB-Status aktualisieren") { Task { await model.refresh() } }
+                Button(language.text("usb.refresh")) { Task { await model.refresh() } }
                     .keyboardShortcut("r")
             }
+        }
+        Settings {
+            LanguageSettingsView(preference: $languagePreference)
+                .environment(\.appLanguage, language)
+                .environment(\.locale, language.locale)
         }
     }
 }

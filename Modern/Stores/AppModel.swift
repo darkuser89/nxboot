@@ -8,11 +8,11 @@ final class AppModel: ObservableObject {
     @Published private(set) var devices: [USBDevice] = []
     @Published private(set) var activity: [Activity] = []
     @Published private(set) var isSending = false
-    @Published private(set) var usbError: String?
-    @Published private(set) var lastResult: String?
+    @Published private(set) var usbError: AppMessage?
+    @Published private(set) var lastResult: AppMessage?
     @Published private(set) var automaticPayloadID: UUID?
     @Published private(set) var automaticEnabled = false
-    @Published var error: String?
+    @Published var error: AppMessage?
     @Published var selectedPayloadID: UUID?
     @Published var selectedDeviceID: UInt64?
     @Published var section: LibrarySection? = .all
@@ -39,7 +39,7 @@ final class AppModel: ObservableObject {
             selectedPayloadID = payloads.first?.id
         } catch {
             canWriteLibrary = false
-            self.error = "Mediathek konnte nicht geladen werden: \(error.localizedDescription)"
+            self.error = AppMessage("error.libraryLoad", error.localizedDescription)
         }
     }
 
@@ -61,25 +61,26 @@ final class AppModel: ObservableObject {
              $0.filename.localizedCaseInsensitiveContains(search))
         }
     }
-    var statusTitle: String {
-        if isSending { return "Payload wird gesendet" }
-        if usbError != nil { return "USB-Erkennung nicht verfügbar" }
-        if let id = selectedDeviceID, usedConnections.contains(id) { return "RCM · bereits gesendet" }
-        if !rcmDevices.isEmpty { return "RCM erkannt" }
-        if !devices.isEmpty { return "Konsole verbunden · kein RCM" }
-        return "Keine Konsole erkannt"
+    var statusTitle: AppMessage {
+        if isSending { return AppMessage("usb.title.sending") }
+        if usbError != nil { return AppMessage("usb.title.unavailable") }
+        if let id = selectedDeviceID, usedConnections.contains(id) { return AppMessage("usb.title.alreadySent") }
+        if !rcmDevices.isEmpty { return AppMessage("usb.title.rcm") }
+        if !devices.isEmpty { return AppMessage("usb.title.normal") }
+        return AppMessage("usb.title.none")
     }
-    var statusDetail: String {
-        if isSending { return "Bitte USB-Kabel angeschlossen lassen." }
+    var statusDetail: AppMessage {
+        if isSending { return AppMessage("usb.detail.sending") }
         if let usbError { return usbError }
         if !rcmDevices.isEmpty {
             if let id = selectedDeviceID, usedConnections.contains(id) {
-                return "Startanforderung bereits gesendet. Für einen weiteren Versuch erneut in RCM verbinden."
+                return AppMessage("usb.detail.alreadySent")
             }
-            return "\(rcmDevices.count == 1 ? "Ein Gerät ist" : "\(rcmDevices.count) Geräte sind") über USB im RCM-Modus erreichbar."
+            return rcmDevices.count == 1 ? AppMessage("usb.detail.one")
+                : AppMessage("usb.detail.multiple", String(rcmDevices.count))
         }
-        if !devices.isEmpty { return "Zum Senden muss die Konsole im RCM-Modus verbunden sein." }
-        return "Konsole im RCM-Modus mit einem USB-Datenkabel verbinden."
+        if !devices.isEmpty { return AppMessage("usb.detail.normal") }
+        return AppMessage("usb.detail.none")
     }
 
     func monitor() async {
@@ -99,7 +100,7 @@ final class AppModel: ObservableObject {
             }
         } catch {
             guard !Task.isCancelled else { return }
-            addActivity("USB-Ereignisse nicht verfügbar; automatische Statusabfrage wird verwendet.", isError: true)
+            addActivity(AppMessage("usb.eventsUnavailable"), isError: true)
             while !Task.isCancelled {
                 await refresh()
                 do { try await Task.sleep(for: .seconds(1)) } catch { break }
@@ -118,15 +119,15 @@ final class AppModel: ObservableObject {
             // Only a successful scan can confirm a disconnection; errors must not re-arm auto-send.
             observedRCMConnections = rcmIDs
             if usbError != nil {
-                addActivity("USB-Erkennung wieder verfügbar.")
+                addActivity(AppMessage("usb.recovered"))
                 usbError = nil
             }
             if snapshot != devices {
                 let old = Set(devices.map(\.id)), new = Set(snapshot.map(\.id))
                 for device in snapshot where !old.contains(device.id) {
-                    addActivity("\(device.title) verbunden · \(device.identity)")
+                    addActivity(AppMessage(device.isRCM ? "activity.connectedRCM" : "activity.connectedConsole", device.identity))
                 }
-                if !old.subtracting(new).isEmpty { addActivity("USB-Verbindung getrennt.") }
+                if !old.subtracting(new).isEmpty { addActivity(AppMessage("activity.disconnected")) }
                 devices = snapshot
             }
             // Never reuse a successfully consumed RCM session until its instance disappears.
@@ -139,16 +140,17 @@ final class AppModel: ObservableObject {
                 if rcmDevices.count == 1, let id = rcmDevices.first?.id,
                    newlyDetected.contains(id), !usedConnections.contains(id) {
                     selectedDeviceID = id
-                    addActivity("Automatisch: \(payload.name)")
+                    addActivity(AppMessage("auto.log", payload.name))
                     if let task = send(payload) { await task.value }
                 } else if rcmDevices.count > 1 {
-                    addActivity("Automatik wartet: mehrere RCM-Geräte. Bitte manuell senden.")
+                    addActivity(AppMessage("auto.multiple"))
                 }
             }
         } catch {
-            if usbError != error.localizedDescription {
-                addActivity(error.localizedDescription, isError: true)
-                usbError = error.localizedDescription
+            let message = AppMessage(error: error)
+            if usbError != message {
+                addActivity(message, isError: true)
+                usbError = message
             }
             if !devices.isEmpty { devices = [] }
             if selectedDeviceID != nil { selectedDeviceID = nil }
@@ -167,9 +169,10 @@ final class AppModel: ObservableObject {
         } catch { report(error) }
     }
 
-    func chooseFiles(replacing id: UUID? = nil) {
+    func chooseFiles(replacing id: UUID? = nil, language: AppLanguage) {
         let panel = NSOpenPanel()
-        panel.title = id == nil ? "Payloads hinzufügen" : "Payload-Datei neu zuordnen"
+        panel.title = language.text(id == nil ? "payload.addPanel" : "payload.relinkPanel")
+        panel.prompt = language.text("action.choose")
         panel.allowedContentTypes = [UTType(filenameExtension: "bin") ?? .data]
         panel.allowsMultipleSelection = id == nil
         panel.canChooseDirectories = false
@@ -211,7 +214,7 @@ final class AppModel: ObservableObject {
             selectedPayloadID = selection
             section = .all
             search = ""
-            if !urls.isEmpty { addActivity("\(urls.count) Payload-Datei(en) zugeordnet.") }
+            if !urls.isEmpty { addActivity(AppMessage("activity.assigned", String(urls.count))) }
         } catch { report(error) }
     }
 
@@ -251,13 +254,13 @@ final class AppModel: ObservableObject {
         selectedPayloadID = payload.id
         isSending = true
         lastResult = nil
-        addActivity("Sende \(payload.name) an \(device.identity)…")
+        addActivity(AppMessage("activity.sending", payload.name, device.identity))
         return Task {
             do {
                 let bytes = try await usb.send(payload, to: device.id)
                 usedConnections.insert(device.id)
-                lastResult = "\(bytes.formatted()) Bytes übertragen · Start angefordert. Der Start auf der Konsole ist nicht bestätigt."
-                addActivity("\(payload.name): Übertragung abgeschlossen, Start angefordert.")
+                lastResult = AppMessage("usb.result.sent", String(bytes))
+                addActivity(AppMessage("activity.sent", payload.name))
                 var next = payloads
                 if let index = next.firstIndex(where: { $0.id == payload.id }) {
                     next[index].lastSentAt = Date()
@@ -270,9 +273,9 @@ final class AppModel: ObservableObject {
                 // Partial USB transfers also consume the session; do not blindly send twice.
                 if (error as NSError).domain == "NXBootModern.USB" {
                     usedConnections.insert(device.id)
-                    lastResult = "USB-Übertragung fehlgeschlagen. Für einen neuen Versuch erneut in RCM verbinden."
+                    lastResult = AppMessage("usb.result.failed")
                 } else {
-                    lastResult = "Die Datei konnte nicht gesendet werden. Bitte den Dateiverweis prüfen."
+                    lastResult = AppMessage("usb.result.fileFailed")
                 }
             }
             isSending = false
@@ -290,10 +293,11 @@ final class AppModel: ObservableObject {
         automaticEnabled = automaticEnabled && id != nil
     }
     private func report(_ error: Error) {
-        self.error = error.localizedDescription
-        addActivity(error.localizedDescription, isError: true)
+        let message = AppMessage(error: error)
+        self.error = message
+        addActivity(message, isError: true)
     }
-    private func addActivity(_ message: String, isError: Bool = false) {
+    private func addActivity(_ message: AppMessage, isError: Bool = false) {
         activity.insert(Activity(message: message, isError: isError), at: 0)
         if activity.count > 100 { activity.removeLast(activity.count - 100) }
     }

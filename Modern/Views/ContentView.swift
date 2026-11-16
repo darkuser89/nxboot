@@ -8,6 +8,8 @@ struct ContentView: View {
     @AppStorage("joyConAccent") private var accent = JoyConAccent.gray
     @Environment(\.colorScheme) private var colorScheme
 
+    @Environment(\.appLanguage) private var language
+
     var body: some View {
         VStack(spacing: 0) {
             ConnectionView(model: model)
@@ -23,18 +25,18 @@ struct ContentView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button { showsAccentPicker.toggle() } label: {
-                    Label("Joy-Con-Akzent", systemImage: "paintpalette")
-                }.help("Joy-Con-Farbe wählen · \(accent.name)")
+                    Label(language.text("accent.title"), systemImage: "paintpalette")
+                }.help(language.text("accent.choose", accent.name(in: language)))
                     .popover(isPresented: $showsAccentPicker) { AccentPickerView(selection: $accent) }
-                Button { model.chooseFiles() } label: {
-                    Label("Payload hinzufügen", systemImage: "plus")
-                }.help("Payload hinzufügen (⌘O)").disabled(model.isSending)
+                Button { model.chooseFiles(language: language) } label: {
+                    Label(language.text("payload.add"), systemImage: "plus")
+                }.help(language.text("payload.addHelp")).disabled(model.isSending)
                 Button { showsActivity = true } label: {
-                    Label("Aktivität", systemImage: "clock.arrow.circlepath")
-                }.help("Aktivität")
+                    Label(language.text("activity.title"), systemImage: "clock.arrow.circlepath")
+                }.help(language.text("activity.title"))
                 Button { showsHelp = true } label: {
-                    Label("Hilfe", systemImage: "questionmark.circle")
-                }.help("Hilfe")
+                    Label(language.text("help.title"), systemImage: "questionmark.circle")
+                }.help(language.text("help.title"))
             }
         }
         .dropDestination(for: URL.self) { urls, _ in
@@ -45,15 +47,15 @@ struct ContentView: View {
         .alert("NXBoot Modern", isPresented: Binding(
             get: { model.error != nil }, set: { if !$0 { model.error = nil } }
         )) {
-            Button("OK", role: .cancel) { model.error = nil }
-        } message: { Text(model.error ?? "") }
+            Button(language.text("action.ok"), role: .cancel) { model.error = nil }
+        } message: { Text(model.error?.localized(in: language) ?? "") }
         .sheet(isPresented: $showsHelp) { HelpView() }
         .sheet(isPresented: $showsActivity) {
             VStack(spacing: 0) {
                 ActivityView(entries: model.activity)
                 HStack {
                     Spacer()
-                    Button("Fertig") { showsActivity = false }.keyboardShortcut(.defaultAction)
+                    Button(language.text("action.done")) { showsActivity = false }.keyboardShortcut(.defaultAction)
                 }.padding(16)
             }.frame(width: 580, height: 380)
         }

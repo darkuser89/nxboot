@@ -8,18 +8,17 @@ struct USBDevice: Identifiable, Equatable, Sendable {
     let name: String
     var isRCM: Bool { vendor == 0x0955 && product == 0x7321 }
     var identity: String { String(format: "%04X:%04X · USB %08X", vendor, product, location) }
-    var title: String { isRCM ? "Tegra RCM" : "Nintendo Switch · kein RCM" }
 }
 
 struct Activity: Identifiable {
     let id = UUID()
     let date = Date()
-    let message: String
+    let message: AppMessage
     let isError: Bool
 }
 
 enum LibrarySection: String, CaseIterable, Identifiable {
-    case all = "Alle Payloads", favorites = "Favoriten", activity = "Aktivität"
+    case all, favorites, activity
     var id: String { rawValue }
     var icon: String {
         switch self {

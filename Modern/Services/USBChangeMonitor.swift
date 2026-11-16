@@ -82,8 +82,7 @@ final class USBChangeMonitor: USBChangeObserving {
         while case let service = IOIteratorNext(iterator), service != 0 { IOObjectRelease(service) }
     }
 
-    private func failure() -> NSError {
-        NSError(domain: "NXBootModern.USBMonitor", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "USB-Ereignismeldungen sind nicht verfügbar."])
+    private func failure() -> AppMessage {
+        AppMessage("error.usbEvents")
     }
 }

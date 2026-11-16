@@ -4,19 +4,7 @@ enum JoyConAccent: String, CaseIterable, Identifiable {
     case gray, yellow, green, red, blue, purple, orange, cyan, pink
     var id: String { rawValue }
 
-    var name: String {
-        switch self {
-        case .gray: return "Grau"
-        case .yellow: return "Neongelb"
-        case .green: return "Neongrün"
-        case .red: return "Neonrot"
-        case .blue: return "Blau"
-        case .purple: return "Lila"
-        case .orange: return "Orange"
-        case .cyan: return "Neonblau"
-        case .pink: return "Neonpink"
-        }
-    }
+    func name(in language: AppLanguage) -> String { language.text("accent.\(rawValue)") }
 
     // Representative surface colors sampled from the user's Joy-Con reference.
     private var hex: UInt32 {

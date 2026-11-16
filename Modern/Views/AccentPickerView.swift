@@ -3,9 +3,11 @@ import SwiftUI
 struct AccentPickerView: View {
     @Binding var selection: JoyConAccent
 
+    @Environment(\.appLanguage) private var language
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Joy-Con-Akzent").font(.headline)
+            Text(language.text("accent.title")).font(.headline)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
                 ForEach(JoyConAccent.allCases) { accent in
                     Button { selection = accent } label: {
@@ -17,7 +19,7 @@ struct AccentPickerView: View {
                                             .foregroundStyle(accent.onColor)
                                     }
                                 }
-                            Text(accent.name).font(.system(size: 10)).foregroundStyle(.primary)
+                            Text(accent.name(in: language)).font(.system(size: 10)).foregroundStyle(.primary)
                                 .lineLimit(1).minimumScaleFactor(0.8)
                         }
                         .frame(maxWidth: .infinity).padding(.vertical, 6)
@@ -25,7 +27,7 @@ struct AccentPickerView: View {
                                     in: RoundedRectangle(cornerRadius: 7))
                         .contentShape(Rectangle())
                     }.buttonStyle(.plain)
-                        .accessibilityLabel(accent.name)
+                        .accessibilityLabel(accent.name(in: language))
                         .accessibilityAddTraits(selection == accent ? .isSelected : [])
                 }
             }

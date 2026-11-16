@@ -14,6 +14,9 @@ ZIP_NAME="NXBoot-Modern-v${APP_VERSION}-macOS-arm64.zip"
 
 /usr/bin/codesign --verify --deep --strict "$APP_BUNDLE"
 /usr/bin/lipo "$APP_BUNDLE/Contents/MacOS/NXBootModern" -verify_arch arm64
+for LANGUAGE in en de ro; do
+    /usr/bin/plutil -lint "$APP_BUNDLE/Contents/Resources/$LANGUAGE.lproj/Localizable.strings"
+done
 BUNDLE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_BUNDLE/Contents/Info.plist")"
 [[ "$BUNDLE_VERSION" == "$APP_VERSION" ]]
 mkdir -p "$RELEASE_DIR"

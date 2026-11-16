@@ -100,6 +100,7 @@ jobs:
 
           - RCM detection through USB events, favorites and optional automatic payload sending.
           - Nine Joy-Con accent colors with matching Dock and Finder icons.
+          - English, German and Romanian. Choose a language in Settings or follow macOS, with English as the fallback.
           - Unit tests, native USB registry subscription checks and all nine strict icon/signature checks passed.
           - Ad hoc signed; not Apple-notarized. No boot payloads are included.
 

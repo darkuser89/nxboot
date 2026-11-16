@@ -9,6 +9,7 @@ CHECKER="$BUILD_ROOT/.FinderIconSignatureCheck"
 trap 'rm -f "$CHECKER"' EXIT
 xcrun swiftc -parse-as-library -module-cache-path "$BUILD_ROOT/ModuleCache" \
     "$ROOT_DIR/Modern/Models/JoyConAccent.swift" \
+    "$ROOT_DIR/Modern/Models/AppLanguage.swift" \
     "$ROOT_DIR/Modern/Services/AppIconRenderer.swift" \
     "$ROOT_DIR/Modern/Services/FinderIconService.swift" \
     "$ROOT_DIR/Tests/Integration/FinderIconSignatureCheck.swift" -o "$CHECKER"

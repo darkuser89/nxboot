@@ -3,19 +3,21 @@ import SwiftUI
 struct AutomaticSendView: View {
     @ObservedObject var model: AppModel
 
+    @Environment(\.appLanguage) private var language
+
     var body: some View {
         HStack(spacing: 10) {
-            Toggle("Automatisch", isOn: Binding(
+            Toggle(language.text("auto.title"), isOn: Binding(
                 get: { model.automaticEnabled },
                 set: { model.configureAutomatic(payloadID: model.automaticPayloadID, enabled: $0) }
             ))
             .toggleStyle(.checkbox)
             .disabled(model.automaticPayload == nil)
-            Picker("Automatischer Payload", selection: Binding(
+            Picker(language.text("auto.payload"), selection: Binding(
                 get: { model.automaticPayloadID },
                 set: { model.configureAutomatic(payloadID: $0, enabled: model.automaticEnabled) }
             )) {
-                Text("Payload wählen…").tag(Optional<UUID>.none)
+                Text(language.text("payload.choose")).tag(Optional<UUID>.none)
                 ForEach(model.payloads) { payload in
                     Text(payload.name).tag(Optional(payload.id))
                 }
@@ -24,6 +26,6 @@ struct AutomaticSendView: View {
         .font(.caption)
         .disabled(model.isSending)
         .padding(.horizontal, 12).padding(.bottom, 8)
-        .help("Bei der nächsten RCM-Erkennung einmal senden. Bei mehreren RCM-Geräten bitte manuell wählen.")
+        .help(language.text("auto.help"))
     }
 }

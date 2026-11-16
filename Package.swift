@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "NXBootModern",
+    defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     products: [.executable(name: "NXBootModern", targets: ["NXBootModern"])],
     targets: [
@@ -13,7 +14,8 @@ let package = Package(
         .target(name: "ModernUSB", dependencies: ["NXBootKit"], path: "ModernUSB",
                 publicHeadersPath: "include", cSettings: [.headerSearchPath(".."), .unsafeFlags(["-fobjc-arc"])],
                 linkerSettings: [.linkedFramework("IOKit")]),
-        .executableTarget(name: "NXBootModern", dependencies: ["ModernUSB"], path: "Modern"),
+        .executableTarget(name: "NXBootModern", dependencies: ["ModernUSB"], path: "Modern",
+                          resources: [.process("Resources")]),
         .testTarget(name: "NXBootModernTests", dependencies: ["NXBootModern", "ModernUSB"],
                     path: "Tests/NXBootModernTests")
     ],

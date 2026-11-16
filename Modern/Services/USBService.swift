@@ -19,8 +19,7 @@ actor USBService: USBServicing {
         let resolved = try PayloadFile.resolve(payload)
         let data = try PayloadFile.read(resolved.url)
         guard let url = Bundle.main.url(forResource: "intermezzo", withExtension: "bin") else {
-            throw NSError(domain: "NXBootModern", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "Der integrierte Relocator fehlt. Bitte die vollständige App verwenden."])
+            throw AppMessage("error.relocator")
         }
         let relocator = try Data(contentsOf: url)
         try NXUSBTransport.sendPayload(data, registryID: id, relocator: relocator)

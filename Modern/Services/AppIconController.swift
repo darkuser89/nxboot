@@ -5,7 +5,7 @@ final class AppIconController {
     static let shared = AppIconController()
     private let renderer = AppIconRenderer(iconURL: Bundle.main.url(forResource: "AppIconTemplate", withExtension: "png"))
 
-    func apply(_ accent: JoyConAccent) async -> String? {
+    func apply(_ accent: JoyConAccent) async -> AppMessage? {
         // Coalesce rapid palette clicks before rendering and signing an exchange bundle.
         do { try await Task.sleep(for: .milliseconds(180)) } catch { return nil }
         guard let image = await renderer.render(accent), !Task.isCancelled else { return nil }
@@ -17,7 +17,7 @@ final class AppIconController {
         } catch is CancellationError {
             return nil
         } catch {
-            return error.localizedDescription
+            return AppMessage(error: error)
         }
     }
 }
