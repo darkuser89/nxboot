@@ -13,6 +13,20 @@ final class AppLanguageTests: XCTestCase {
         XCTAssertEqual(LanguagePreference.en.resolve(preferredLanguage: "ro-RO"), .en)
     }
 
+    func testNativeInterfaceLanguageUsesOnlyVolatileDefaults() throws {
+        let suite = "AppLanguageTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let originalArguments = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+        defer { defaults.setVolatileDomain(originalArguments, forName: UserDefaults.argumentDomain) }
+        defaults.setVolatileDomain(["probe": true], forName: UserDefaults.argumentDomain)
+
+        AppLanguage.ro.applyToNativeInterface(defaults: defaults)
+
+        XCTAssertEqual(defaults.stringArray(forKey: "AppleLanguages"), ["ro"])
+        XCTAssertTrue(defaults.bool(forKey: "probe"))
+        XCTAssertNil(defaults.persistentDomain(forName: suite)?["AppleLanguages"])
+    }
+
     func testLocalizedMessagesAndUSBError() {
         let entry = AppMessage("activity.sending", "Hekate", "USB 01")
         XCTAssertEqual(entry.localized(in: .en), "Sending Hekate to USB 01…")

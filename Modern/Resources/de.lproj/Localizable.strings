@@ -1,5 +1,6 @@
 "language.title" = "Sprache";
 "language.system" = "Systemsprache";
+"language.restart" = "Starte NXBoot neu, damit Menüs und Dateidialoge die gewählte Sprache übernehmen.";
 "language.active" = "Aktive Sprache: %1$@";
 "action.done" = "Fertig";
 "action.cancel" = "Abbrechen";

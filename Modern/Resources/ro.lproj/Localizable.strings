@@ -1,5 +1,6 @@
 "language.title" = "Limbă";
 "language.system" = "Limba sistemului";
+"language.restart" = "Repornește NXBoot pentru a aplica limba aleasă meniurilor și dialogurilor de fișiere.";
 "language.active" = "Limba activă: %1$@";
 "action.done" = "Gata";
 "action.cancel" = "Anulează";

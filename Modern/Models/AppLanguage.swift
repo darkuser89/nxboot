@@ -4,6 +4,8 @@ import SwiftUI
 enum LanguagePreference: String, CaseIterable, Identifiable {
     case system, en, de, ro
 
+    static let storageKey = "languagePreference"
+
     var id: String { rawValue }
 
     func resolve(preferredLanguage: String? = AppLanguage.systemIdentifier) -> AppLanguage {
@@ -23,8 +25,20 @@ enum LanguagePreference: String, CaseIterable, Identifiable {
 enum AppLanguage: String, CaseIterable {
     case en, de, ro
 
-    static var systemIdentifier: String? {
+    // Capture the macOS preference before setting the current process's language.
+    static let systemIdentifier: String? = {
         UserDefaults.standard.stringArray(forKey: "AppleLanguages")?.first ?? Locale.preferredLanguages.first
+    }()
+
+    static let startupLanguage: AppLanguage = {
+        let saved = UserDefaults.standard.string(forKey: LanguagePreference.storageKey)
+        return (saved.flatMap(LanguagePreference.init(rawValue:)) ?? .system).resolve()
+    }()
+
+    func applyToNativeInterface(defaults: UserDefaults = .standard) {
+        var launchArguments = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+        launchArguments["AppleLanguages"] = [rawValue]
+        defaults.setVolatileDomain(launchArguments, forName: UserDefaults.argumentDomain)
     }
 
     static func matching(_ identifier: String?) -> AppLanguage {

@@ -3,6 +3,8 @@
 Unter **NXBoot Modern → Einstellungen** (⌘,) kannst du die Systemsprache verwenden
 oder Deutsch, Rumänisch und Englisch direkt auswählen. Ist die macOS-Sprache
 unbekannt oder wird sie nicht unterstützt, verwendet die App Englisch.
+Nach einem Sprachwechsel übernimmt macOS die Auswahl für Menüs und Dateidialoge
+beim nächsten Start von NXBoot.
 
 Native macOS-Oberfläche auf Basis von [mologie/nxboot](https://github.com/mologie/nxboot).
 Die ursprünglichen iOS- und Kommandozeilenprojekte bleiben im Repository erhalten.

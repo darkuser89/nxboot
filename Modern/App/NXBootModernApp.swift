@@ -5,7 +5,11 @@ import SwiftUI
 struct NXBootModernApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
-    @AppStorage("languagePreference") private var languagePreference = LanguagePreference.system
+    @AppStorage(LanguagePreference.storageKey) private var languagePreference = LanguagePreference.system
+
+    init() {
+        AppLanguage.startupLanguage.applyToNativeInterface()
+    }
 
     private var language: AppLanguage { languagePreference.resolve() }
 

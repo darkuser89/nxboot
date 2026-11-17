@@ -1,5 +1,6 @@
 "language.title" = "Language";
 "language.system" = "System Language";
+"language.restart" = "Restart NXBoot to apply the selected language to menus and file dialogs.";
 "language.active" = "Active language: %1$@";
 "action.done" = "Done";
 "action.cancel" = "Cancel";
